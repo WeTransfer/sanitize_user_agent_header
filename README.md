@@ -1,6 +1,10 @@
-## Usage
+Decodes the `User-Agent` header in your Rack request hash to be UTF-8. Mostly useful for headers like
 
-TODO: Write usage instructions here
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; Telecomunicaciones espa��olas`
+
+which get inserted by (rather clueless) telcos, especially in packaged Android distributions (one of the many reasons why letting telcos
+customize the handset is a bad idea). This library will do it's best to reencode the header in good UTF-8, and barring that will do a lossy
+replacement with question-mark substitions.
 
 ## Installation
 
@@ -17,6 +21,10 @@ And then execute:
 Or install it yourself as:
 
     $ gem install sanitize_user_agent_header
+
+In Rails the gem will be inserted into your application stack automatically. In raw Rack, install the middleware in `config.ru` like so:
+
+    use SanitizeUserAgentHeader
 
 ## Development
 
