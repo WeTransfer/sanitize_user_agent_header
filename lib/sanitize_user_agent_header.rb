@@ -35,4 +35,8 @@ class SanitizeUserAgentHeader
     str.force_encoding(Encoding::ISO8859_1)
     str.encode(Encoding::ASCII, invalid: :replace, undef: :replace, replace: '?').encode(Encoding::UTF_8)
   end
+  
+  if defined?(Rails)
+    require_relative 'sanitize_user_agent_header/railtie'
+  end
 end
