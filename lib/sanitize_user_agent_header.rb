@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "sanitize_user_agent_header/version"
 
 # This middleware will ensure that the User-Agent request header is actually
@@ -7,35 +9,35 @@ require "sanitize_user_agent_header/version"
 # decode to it is a chore. Also, we are not violating the spec, merely "matching"
 # the encoding of an input variable to the internal encoding of the system.
 class SanitizeUserAgentHeader
-  HTTP_USER_AGENT = 'HTTP_USER_AGENT'.freeze
+  HTTP_USER_AGENT = 'HTTP_USER_AGENT'
   private_constant :HTTP_USER_AGENT
-  
+
   def initialize(app)
     @app = app
   end
-  
+
   def call(env)
     if env[HTTP_USER_AGENT]
-      env[HTTP_USER_AGENT] = opportunistically_convert_to_utf8(env[HTTP_USER_AGENT])
+      env[HTTP_USER_AGENT] = convert_string_to_utf8(env[HTTP_USER_AGENT])
     end
     @app.call(env)
   end
-  
+
   # http://stackoverflow.com/questions/10384741/is-a-unicode-user-agent-legal-inside-an-http-header
-  def opportunistically_convert_to_utf8(str)
-    try_encodings = %w( ISO-8859-1 CP1252 )
-    try_encodings.each do |enc|
-      begin
-        encoded_as_utf8 = str.force_encoding(enc).encode(Encoding::UTF_8)
-        return encoded_as_utf8
-      rescue Encoding::UndefinedConversionError
-      end
+  def convert_string_to_utf8(str)
+    with_switchable_encoding = str.dup # for frozen strings
+    # Try UTF-8 first because it is easier to affirm that the string is invalid UTF-8.
+    # Any byte sequence is valid ISO and we will try it second
+    with_switchable_encoding.force_encoding(Encoding::UTF_8)
+    if with_switchable_encoding.valid_encoding?
+      return with_switchable_encoding.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: '?')
     end
-    # Last resort, just strip it of everything
-    str.force_encoding(Encoding::ISO8859_1)
-    str.encode(Encoding::ASCII, invalid: :replace, undef: :replace, replace: '?').encode(Encoding::UTF_8)
+
+    # If we ended up here the string is certainly _not_ UTF-8 and must be interpreted as ISO
+    with_switchable_encoding.force_encoding(Encoding::ISO8859_1)
+    with_switchable_encoding.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: '?')
   end
-  
+
   if defined?(Rails)
     require_relative 'sanitize_user_agent_header/railtie'
   end
